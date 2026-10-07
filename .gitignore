@@ -22,3 +22,14 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# 1. Gradle 빌드 결과물 및 캐시 (가장 중요!)
+.gradle/
+build/
+
+# 2. 로컬 톰캣 및 IDE 설정 파일
+.smarttomcat/
+.idea/
+*.iml
+out/
+
