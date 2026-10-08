@@ -25,7 +25,7 @@ public class LogoutServlet extends HttpServlet {
         }
 
         // 3. 로그아웃 완료 후 메인 페이지 또는 로그인 페이지로 이동
-        response.sendRedirect(request.getContextPath() + "/main.jsp");
+        response.sendRedirect(request.getContextPath() + "/main");
     }
 
     @Override
