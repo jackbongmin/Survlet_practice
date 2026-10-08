@@ -1,0 +1,236 @@
+/* [1] 기본 여백 초기화 및 박스 사이징 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* [2] 화면 배경 및 폰트 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+    background-color: #f0f2f5;
+    color: #2c3e50;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 16px;
+}
+
+/* [3] 중앙 카드 컨테이너 */
+.app-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 480px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    padding: 32px 28px;
+}
+
+/* [4] 헤더 영역 */
+.app-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.app-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 6px;
+}
+
+.app-subtitle {
+    font-size: 13px;
+    color: #718096;
+}
+
+/* [5] 로그인한 사용자 뱃지 바 */
+.user-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ebf8ff;
+    border: 1px solid #bee3f8;
+    padding: 10px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.user-badge {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2b6cb0;
+}
+
+.btn-logout {
+    font-size: 12px;
+    color: #e53e3e;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid #feb2b2;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: #fff;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    background: #e53e3e;
+    color: #fff;
+}
+
+/* [6] 입력 폼 스타일 */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #4a5568;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background-color: #3182ce;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #2b6cb0;
+}
+
+/* [7] TODO 입력 폼 (가로 배치) */
+.todo-input-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.todo-input-form input {
+    flex: 1;
+}
+
+.btn-add {
+    padding: 0 18px;
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-add:hover {
+    background-color: #2b6cb0;
+}
+
+/* [8] TODO 목록 아이템 */
+.todo-list {
+    list-style: none;
+}
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: #f7fafc;
+    border: 1px solid #edf2f7;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.todo-content-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.todo-checkbox-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.todo-text {
+    font-size: 14px;
+    color: #2d3748;
+    word-break: break-all;
+}
+
+/* 완료 시 취소선 및 흐리게 표시 */
+.todo-item.done .todo-text {
+    text-decoration: line-through;
+    color: #a0aec0;
+}
+
+.btn-delete {
+    background: none;
+    border: none;
+    color: #a0aec0;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.btn-delete:hover {
+    color: #e53e3e;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 30px 10px;
+    color: #a0aec0;
+    font-size: 14px;
+}
+
+.error-box {
+    background-color: #fff5f5;
+    color: #c53030;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    text-align: center;
+    border: 1px solid #fed7d7;
+}
+
+.hint-box {
+    margin-top: 20px;
+    background-color: #f7fafc;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #718096;
+    line-height: 1.6;
+}
