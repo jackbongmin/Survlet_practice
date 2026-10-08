@@ -34,7 +34,7 @@ public class LoginServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         if(session != null && session.getAttribute("loginUser") != null) {
             // 이미 로그인되어 있으면 메인 페이지로 이동
-            response.sendRedirect(request.getContextPath() + "/main.jsp");
+            response.sendRedirect(request.getContextPath() + "/main");
             return;
         }
 
@@ -71,7 +71,7 @@ public class LoginServlet extends HttpServlet {
                 session.setMaxInactiveInterval(1800);
 
                 // 4. 로그인 성공 후 TODO 화면으로 리다이렉트
-                response.sendRedirect(request.getContextPath() + "/todo");
+                response.sendRedirect(request.getContextPath() + "/main");
             } else {
                 // [로그인 실패]
                 // 에러 메시지를 request에 싣고 다시 로그인 JSP 화면으로 돌아갑니다.

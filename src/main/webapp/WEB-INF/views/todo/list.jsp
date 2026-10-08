@@ -16,6 +16,7 @@
         <div class="user-badge">
             👤 <span>${sessionScope.loginUser.name}</span>님의 할 일
         </div>
+        <a href="${pageContext.request.contextPath}/main" class="btn-logout" style="color: #3182ce; border-color: #bee3f8; margin-right: 4px;">🏠 대시보드</a>
         <%-- 로그아웃 서블릿으로 이동하는 버튼 --%>
         <a href="${pageContext.request.contextPath}/logout" class="btn-logout">로그아웃</a>
     </div>
