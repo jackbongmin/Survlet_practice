@@ -1,155 +1,203 @@
-# [초보자 실습 가이드] JSP & Servlet 로그인 연동 TODO LIST 구현하기
+# [초보자 실습 가이드] JSP & Servlet 로그인 연동 TODO LIST 만들기 (Survlet_practice 기준)
 
-이 가이드는 **MySQL JDBC 기반의 웹 프로젝트(`custom_project_jdbc`)**에 **회원 로그인 기능과 사용자별 TODO LIST(할 일 관리) 기능**을 단계별로 추가할 수 있도록 작성된 실습 가이드입니다.
+이 가이드는 **현재 진행 중인 프로젝트(`C:\Users\user\Documents\GitHub\Survlet_practice`)를 기준**으로 작성되었습니다.  
 
-기존 `JSP_LOGIN_GUIDE.md`처럼 기초부터 원리, 코드, 테스트 방법까지 초보자의 눈높이에 맞추어 상세히 설명합니다.
+기존에 작성했던 **단순 로그인 기능(`JSP_LOGIN_GUIDE`)**에서 한 단계 발전하여,  
+`C:\Users\user\Desktop\custom_project_jdbc`의 **MySQL JDBC 연결 방식(`ConnectionProvider`)**을 접목하고,  
+**로그인한 사용자를 식별하여 각자만의 TODO LIST(할 일 목록)를 관리하는 웹 애플리케이션**으로 확장하는 전체 과정을 단계별로 안내합니다.
+
+> ⚠️ **주의**: 이 문서는 학습 안내용 가이드입니다. 기존 소스 코드를 자동으로 변경하지 않으므로, 가이드의 코드를 확인하며 본인의 프로젝트에 직접 적용해보세요!
 
 ---
 
 ## 📌 목차
-1. [구현 목표 및 핵심 개념](#1-구현-목표-및-핵심-개념)
+1. [전체 개요 및 작업 분류표 (기존 파일 수정 vs 신규 파일 구현)](#1-전체-개요-및-작업-분류표)
 2. [전체 동작 흐름 (시퀀스 다이어그램)](#2-전체-동작-흐름-시퀀스-다이어그램)
 3. [프로젝트 구조 및 파일 배치도](#3-프로젝트-구조-및-파일-배치도)
-4. [Step 0: 데이터베이스 및 테이블 구축 (`sql/todo_schema.sql`)](#step-0-데이터베이스-및-테이블-구축-sqltodo_schemasql)
-5. [Step 1: 데이터 모델 (DTO) 작성](#step-1-데이터-모델-dto-작성)
-   - 1.1 `Member.java` (회원 정보)
-   - 1.2 `TodoItem.java` (할 일 정보)
-6. [Step 2: 데이터 접근 객체 (DAO) 작성](#step-2-데이터-접근-객체-dao-작성)
-   - 2.1 `MemberDao.java` & `JdbcMemberDao.java`
-   - 2.2 `TodoDao.java` & `JdbcTodoDao.java`
-7. [Step 3: 비즈니스 로직 (Service) 작성](#step-3-비즈니스-로직-service-작성)
-   - 3.1 `MemberService.java`
-   - 3.2 `TodoService.java`
-8. [Step 4: 컨트롤러 (Servlet) 작성](#step-4-컨트롤러-servlet-작성)
-   - 4.1 `LoginServlet.java` (로그인 처리)
-   - 4.2 `LogoutServlet.java` (로그아웃 처리)
-   - 4.3 `TodoServlet.java` (할 일 CRUD 및 사용자 식별)
-9. [Step 5: 화면 뷰 (JSP & CSS) 작성](#step-5-화면-뷰-jsp--css-작성)
-   - 5.1 `login.jsp` (로그인 페이지)
-   - 5.2 `todo/list.jsp` (할 일 관리 메인 페이지)
-   - 5.3 `assets/css/todo.css` (UI 스타일시트)
-10. [Step 6: 실행 및 테스트 시나리오](#step-6-실행-및-테스트-시나리오)
-11. [자주 묻는 질문 & 트러블슈팅 (FAQ)](#자주-묻는-질문--트러블슈팅-faq)
+4. [Step 0: Gradle 의존성 추가 (`build.gradle`)](#step-0-gradle-의존성-추가-buildgradle)
+5. [Step 1: DB 스키마 및 테스트 계정 구축 (`sql/todo_schema.sql`)](#step-1-db-스키마-및-테스트-계정-구축-sqltodo_schemasql)
+6. [Step 2: MySQL 연결 클래스 작성 (`ConnectionProvider.java`)](#step-2-mysql-연결-클래스-작성-connectionproviderjava)
+7. [Step 3: 데이터 모델(DTO) 정비](#step-3-데이터-모델dto-정비)
+   - 3.1 `Member.java` (기존 파일 수정)
+   - 3.2 `TodoItem.java` (신규 파일 작성)
+8. [Step 4: 데이터 접근 객체(DAO) 작성](#step-4-데이터-접근-객체dao-작성)
+   - 4.1 `MemberDao.java` & `JdbcMemberDao.java`
+   - 4.2 `TodoDao.java` & `JdbcTodoDao.java`
+9. [Step 5: 비즈니스 로직(Service) 작성](#step-5-비즈니스-로직service-작성)
+   - 5.1 `MemberService.java`
+   - 5.2 `TodoService.java`
+10. [Step 6: 컨트롤러(Servlet) 작성 및 수정](#step-6-컨트롤러servlet-작성-및-수정)
+    - 6.1 `LoginServlet.java` (기존 파일 수정: DB 연동 & TODO 연계)
+    - 6.2 `LogoutServlet.java` (기존 파일 유지 확인)
+    - 6.3 `TodoServlet.java` (신규 파일 작성: 사용자 식별 & CRUD)
+11. [Step 7: 화면 뷰(JSP & CSS) 작성](#step-7-화면-뷰jsp--css-작성)
+    - 7.1 `assets/css/todo.css` (신규 스타일시트)
+    - 7.2 `WEB-INF/views/login.jsp` (기존 폼 업데이트)
+    - 7.3 `WEB-INF/views/todo/list.jsp` (신규 TODO 메인 화면)
+    - 7.4 `main.jsp` (기존 메인 화면에 TODO 바로가기 링크 추가)
+12. [Step 8: 실행 및 동작 테스트 시나리오](#step-8-실행-및-동작-테스트-시나리오)
+13. [초보자 트러블슈팅 & 자주 묻는 질문 (FAQ)](#초보자-트러블슈팅--자주-묻는-질문-faq)
 
 ---
 
-## 1. 구현 목표 및 핵심 개념
+## 1. 전체 개요 및 작업 분류표
 
-### 🎯 주요 요구사항
-1. **사용자별 독립된 TODO 관리**:
-   - `백종민` 사용자로 로그인하면 `백종민`의 할 일만 표시되고 추가/수정/삭제됩니다.
-   - `김유진` 사용자로 로그인하면 `김유진`의 할 일만 표시됩니다.
-2. **사전 생성 계정**:
-   - 아이디 `백종민` / 비밀번호 `1234`
-   - 아이디 `김유진` / 비밀번호 `1234`
-3. **핵심 기능**:
-   - **조회**: 로그인된 회원의 TODO 목록 최신순 조회
-   - **추가**: 새 할 일 등록 (기본값: 미완료)
-   - **상태 변경**: 완료 여부 체크박스 토글 (미완료 ↔ 완료)
-   - **삭제**: 본인의 할 일 삭제
-   - **로그아웃**: 세션 파기 후 로그인 화면으로 이동
-4. **아키텍처**:
-   - `C:\Users\user\Desktop\custom_project_jdbc`의 기존 구조(`ConnectionProvider`, DAO 인터페이스 + 구현체, Service, Servlet, JSP)를 그대로 계승합니다.
+현재 `Survlet_practice` 프로젝트에서 **수정해야 할 기존 파일**과 **내용을 채워야 할 신규 파일**을 한눈에 정리했습니다.
+
+| 분류 | 대상 파일 경로 | 작업 내용 |
+| :--- | :--- | :--- |
+| 🔄 **기존 수정** | `build.gradle` | MySQL 드라이버(`mysql-connector-j`) 및 JSTL 라이브러리 의존성 추가 |
+| 🔄 **기존 수정** | `src/.../config/ConnectionProvider.java` | 빈 클래스에 MySQL 접속 로직(`localhost:3306/kyobo`, `root`/`0000`) 구현 |
+| 🔄 **기존 수정** | `src/.../model/Member.java` | DB 컬럼에 맞추어 `password` 필드 및 생성자 추가 |
+| 🔄 **기존 수정** | `src/.../controller/LoginServlet.java` | 하드코딩 인증을 `MemberService(DB)` 연동으로 교체하고 로그인 성공 시 `/todo`로 연결 |
+| 🔄 **선택 수정** | `src/.../main.jsp` | 메인 페이지에 [내 TODO 관리 바로가기] 버튼 추가 |
+| 🔄 **선택 수정** | `src/.../WEB-INF/views/login.jsp` | 신규 스타일(`todo.css`) 링크 및 힌트 텍스트 업데이트 |
+| 🆕 **신규 작성** | `sql/todo_schema.sql` | `member`, `todo` 테이블 DDL 및 `백종민`/`김유진` 계정 INSERT |
+| 🆕 **신규 작성** | `src/.../model/TodoItem.java` | 할 일 1건의 데이터를 표현하는 DTO |
+| 🆕 **신규 작성** | `src/.../dao/MemberDao.java` & `JdbcMemberDao.java` | DB에서 회원 아이디/비밀번호를 조회하는 DAO |
+| 🆕 **신규 작성** | `src/.../dao/TodoDao.java` & `JdbcTodoDao.java` | 사용자별 TODO 목록 조회, 추가, 완료 토글, 삭제 SQL 실행 |
+| 🆕 **신규 작성** | `src/.../service/MemberService.java` | 로그인 비즈니스 로직 및 유효성 검사 |
+| 🆕 **신규 작성** | `src/.../service/TodoService.java` | 할 일 등록/수정/삭제 비즈니스 로직 |
+| 🆕 **신규 작성** | `src/.../controller/TodoServlet.java` | 세션에서 로그인 사용자 식별 후 본인 TODO만 제어하는 컨트롤러 (`/todo`) |
+| 🆕 **신규 작성** | `src/.../webapp/assets/css/todo.css` | 로그인 및 TODO 전용 카드형 UI 스타일시트 |
+| 🆕 **신규 작성** | `src/.../webapp/WEB-INF/views/todo/list.jsp` | 본인 할 일 목록 출력, 추가, 완료 체크(✅), 삭제 뷰 |
 
 ---
 
 ## 2. 전체 동작 흐름 (시퀀스 다이어그램)
 
-사용자가 로그인하고 본인의 할 일을 관리하는 전체 흐름입니다.
+사용자가 로그인하면 세션에 회원 객체를 보관하고, TODO 페이지에 들어올 때 세션의 아이디(`user_id`)를 기준으로 데이터베이스를 조회합니다.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as 사용자 (브라우저)
-    participant LoginServlet as LoginServlet (인증 컨트롤러)
-    participant TodoServlet as TodoServlet (TODO 컨트롤러)
-    participant Session as HttpSession (서버 메모리)
-    participant DB as MySQL Database
-    participant View as JSP View (login.jsp / todo/list.jsp)
+    participant LoginServlet as LoginServlet (/login)
+    participant TodoServlet as TodoServlet (/todo)
+    participant Session as HttpSession (서버 세션)
+    participant DB as MySQL (kyobo DB)
+    participant View as JSP (todo/list.jsp)
 
-    Note over User, View: [1단계: 로그인 과정]
-    User->>LoginServlet: 아이디('백종민') & 비밀번호('1234') 입력 (POST /login)
-    LoginServlet->>DB: MemberDao 조회 (SELECT WHERE user_id=? AND password=?)
-    DB-->>LoginServlet: 회원 정보 반환
-    LoginServlet->>Session: session.setAttribute("loginUser", member) 저장
-    LoginServlet-->>User: TODO 목록으로 이동 (Redirect /todo)
+    Note over User, View: [1단계: 로그인 처리]
+    User->>LoginServlet: 아이디('백종민'), 비밀번호('1234') 입력 전송 (POST)
+    LoginServlet->>DB: MemberDao 조회 (SELECT WHERE user_id='백종민' AND password='1234')
+    DB-->>LoginServlet: 회원 정보 일치 확인
+    LoginServlet->>Session: session.setAttribute("loginUser", member) 세션 생성
+    LoginServlet-->>User: 리다이렉트 (Redirect: /Survlet_practice/todo)
 
     Note over User, View: [2단계: 내 TODO 목록 조회]
     User->>TodoServlet: GET /todo 요청
     TodoServlet->>Session: session.getAttribute("loginUser") 확인
-    alt 로그인되지 않음
+    alt 로그인되지 않음 (비회원)
         TodoServlet-->>User: 로그인 페이지로 리다이렉트 (/login)
-    else 로그인 됨 (userId: '백종민')
-        TodoServlet->>DB: TodoDao.findByUserId('백종민')
-        DB-->>TodoServlet: '백종민'의 할 일 목록 반환
-        TodoServlet->>View: request.setAttribute("todos", list) 후 list.jsp 포워드
-        View-->>User: 본인의 TODO 목록 화면 렌더링
+    else 로그인됨 (userId = '백종민')
+        TodoServlet->>DB: TodoDao.findByUserId('백종민') 실행
+        DB-->>TodoServlet: '백종민'의 할 일 목록만 반환
+        TodoServlet->>View: request.setAttribute("todos", list) 포워드
+        View-->>User: '백종민' 전용 TODO 화면 출력
     end
 
-    Note over User, View: [3단계: 할 일 추가 / 완료 토글 / 삭제]
-    User->>TodoServlet: POST /todo (action=add & content="JSP 공부하기")
-    TodoServlet->>DB: INSERT INTO todo (user_id, content, is_done) VALUES ('백종민', ...)
-    TodoServlet-->>User: Redirect /todo (새로고침 방지)
+    Note over User, View: [3단계: 할 일 등록 / 완료 토글 / 삭제]
+    User->>TodoServlet: POST /todo (action=add & content='JSP 복습')
+    TodoServlet->>DB: INSERT INTO todo (user_id='백종민', content='JSP 복습')
+    TodoServlet-->>User: Redirect: /Survlet_practice/todo (새로고침 중복 방지)
 ```
 
 ---
 
 ## 3. 프로젝트 구조 및 파일 배치도
 
-`C:\Users\user\Desktop\custom_project_jdbc` 프로젝트에 아래와 같이 파일들을 배치합니다.  
-기존 `ConnectionProvider.java`를 그대로 활용하므로 DB 연결 설정이 아주 간편합니다.
+`C:\Users\user\Documents\GitHub\Survlet_practice` 기준 구조입니다.
 
 ```text
-custom_project_jdbc/
+Survlet_practice/
+ ├── build.gradle                               [기존 수정] MySQL, JSTL 의존성 추가
  ├── sql/
- │    ├── schema.sql              (기존 게시판 테이블)
- │    └── todo_schema.sql         [신규 생성] 회원 및 TODO 테이블 + 테스트 계정
+ │    ├── schema.sql
+ │    └── todo_schema.sql                       [신규 작성] 테이블 생성 및 테스트 계정
  └── src/
       └── main/
            ├── java/
            │    └── com/kyobo/web/
            │         ├── config/
-           │         │    └── ConnectionProvider.java   (기존 DB 연결 클래스 활용)
-           │         ├── model/
-           │         │    ├── BoardPost.java            (기존 모델)
-           │         │    ├── Member.java               [신규 생성] 회원 DTO
-           │         │    └── TodoItem.java             [신규 생성] 할 일 DTO
+           │         │    └── ConnectionProvider.java   [기존 수정] MySQL JDBC 연결 코드 구현
+           │         ├── controller/
+           │         │    ├── HelloServlet.java         (기존 유지)
+           │         │    ├── LoginServlet.java         [기존 수정] DB 연동 및 /todo 리다이렉트
+           │         │    ├── LogoutServlet.java        (기존 유지)
+           │         │    └── TodoServlet.java          [신규 작성] TODO 메인 컨트롤러
            │         ├── dao/
-           │         │    ├── MemberDao.java            [신규 생성] 회원 DAO 인터페이스
-           │         │    ├── JdbcMemberDao.java        [신규 생성] 회원 JDBC 구현체
-           │         │    ├── TodoDao.java              [신규 생성] 할 일 DAO 인터페이스
-           │         │    └── JdbcTodoDao.java          [신규 생성] 할 일 JDBC 구현체
-           │         ├── service/
-           │         │    ├── MemberService.java        [신규 생성] 로그인 비즈니스 로직
-           │         │    └── TodoService.java          [신규 생성] 할 일 비즈니스 로직
-           │         └── controller/
-           │              ├── BoardServlet.java         (기존 게시판 서블릿)
-           │              ├── LoginServlet.java         [신규 생성] 로그인 서블릿 (/login)
-           │              ├── LogoutServlet.java        [신규 생성] 로그아웃 서블릿 (/logout)
-           │              └── TodoServlet.java          [신규 생성] TODO 관리 서블릿 (/todo)
+           │         │    ├── MemberDao.java            [신규 작성] 회원 DAO 인터페이스
+           │         │    ├── JdbcMemberDao.java        [신규 작성] 회원 JDBC 구현체
+           │         │    ├── TodoDao.java              [신규 작성] 할 일 DAO 인터페이스
+           │         │    └── JdbcTodoDao.java          [신규 작성] 할 일 JDBC 구현체
+           │         ├── model/
+           │         │    ├── Member.java               [기존 수정] password 필드 추가
+           │         │    └── TodoItem.java             [신규 작성] 할 일 DTO
+           │         └── service/
+           │              ├── MemberService.java        [신규 작성] 회원 인증 서비스
+           │              └── TodoService.java          [신규 작성] 할 일 비즈니스 서비스
            └── webapp/
                 ├── assets/
                 │    └── css/
-                │         ├── style.css                 (기존 스타일)
-                │         └── todo.css                  [신규 생성] 로그인 & TODO UI 전용 스타일
+                │         ├── style.css                 (기존 유지)
+                │         └── todo.css                  [신규 작성] 깔끔한 UI 스타일시트
+                ├── index.html                          (기존 유지)
+                ├── main.jsp                            [선택 수정] TODO 바로가기 링크 추가
                 └── WEB-INF/
                      └── views/
-                          ├── login.jsp                 [신규 생성] 깔끔한 로그인 폼 화면
+                          ├── login.jsp                 [선택 수정] 스타일 및 테스트 계정 힌트
                           └── todo/
-                               └── list.jsp             [신규 생성] 로그인 사용자별 TODO 관리 화면
+                               └── list.jsp             [신규 작성] 할 일 목록 뷰 화면
 ```
 
 ---
 
-## Step 0: 데이터베이스 및 테이블 구축 (`sql/todo_schema.sql`)
+## Step 0: Gradle 의존성 추가 (`build.gradle`)
 
-MySQL 워크벤치(Workbench)나 CLI에서 실행할 SQL 파일입니다.  
-`member` 테이블과 `todo` 테이블을 생성하고, 외래키(`FOREIGN KEY`)로 연결하여 무결성을 보장합니다.
+MySQL 데이터베이스에 접속하고, JSP에서 편리하게 반복문(`c:forEach`)과 조건문(`c:if`)을 쓰려면 **MySQL 드라이버**와 **JSTL** 라이브러리가 필요합니다.
 
-- **파일 위치**: `sql/todo_schema.sql`
+- **파일 위치**: `build.gradle` (기존 파일 수정)
+
+```groovy
+plugins {
+    id 'java'
+    id 'war'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+
+    // 1. MySQL JDBC 드라이버 추가 (custom_project_jdbc와 동일)
+    implementation 'com.mysql:mysql-connector-j:9.5.0'
+
+    // 2. Jakarta JSTL 라이브러리 추가 (Tomcat 10+ 호환)
+    implementation 'jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api:3.0.1'
+    implementation 'org.glassfish.web:jakarta.servlet.jsp.jstl:3.0.1'
+}
+```
+
+> **⚡ 중요**: `build.gradle` 수정 후 IntelliJ 우측 상단의 **코끼리 아이콘(Gradle 새로고침)**을 반드시 클릭하여 라이브러리를 내려받아야 빨간 줄이 뜨지 않습니다.
+
+---
+
+## Step 1: DB 스키마 및 테스트 계정 구축 (`sql/todo_schema.sql`)
+
+MySQL Workbench 또는 콘솔에서 실행하여 데이터베이스와 테이블을 구성합니다.
+
+- **파일 위치**: `sql/todo_schema.sql` (신규 파일 작성)
 
 ```sql
--- 1. 데이터베이스 선택 (ConnectionProvider에서 설정한 kyobo DB 사용)
+-- 1. kyobo 데이터베이스 사용 (없으면 생성)
+CREATE DATABASE IF NOT EXISTS kyobo
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 USE kyobo;
 
 -- 2. 회원 테이블 (member)
@@ -160,7 +208,7 @@ CREATE TABLE IF NOT EXISTS member (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '가입일'
 );
 
--- 3. TODO 리스트 테이블 (todo)
+-- 3. 할 일 테이블 (todo)
 CREATE TABLE IF NOT EXISTS todo (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '할 일 고유 번호',
     user_id VARCHAR(50) NOT NULL COMMENT '작성자 회원 아이디',
@@ -170,33 +218,68 @@ CREATE TABLE IF NOT EXISTS todo (
     CONSTRAINT fk_todo_member FOREIGN KEY (user_id) REFERENCES member(user_id) ON DELETE CASCADE
 );
 
--- 4. 테스트 계정 추가 (아이디: 백종민 / 비밀번호: 1234, 아이디: 김유진 / 비밀번호: 1234)
+-- 4. 요청하신 테스트 계정 추가 (아이디: 백종민/1234, 김유진/1234)
 INSERT INTO member (user_id, password, name)
 VALUES 
     ('백종민', '1234', '백종민'),
     ('김유진', '1234', '김유진')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
--- 5. 테스트용 초기 TODO 데이터 삽입 (선택 사항)
+-- 5. 테스트용 초기 할 일 샘플 데이터
 INSERT INTO todo (user_id, content, is_done)
 VALUES 
-    ('백종민', '서블릿과 JSP 기초 개념 정리하기', TRUE),
-    ('백종민', 'ConnectionProvider로 JDBC 연결 확인하기', FALSE),
-    ('김유진', 'MySQL Workbench에서 테이블 생성하기', TRUE),
-    ('김유진', 'JSTL c:forEach 문법 복습하기', FALSE);
+    ('백종민', 'JSP와 서블릿 개념 복습하기', TRUE),
+    ('백종민', 'ConnectionProvider로 MySQL 연결 테스트하기', FALSE),
+    ('김유진', 'MySQL Workbench에서 테이블 생성 완료하기', TRUE),
+    ('김유진', 'JSTL c:forEach 문법 확인하기', FALSE);
 ```
-
-> **💡 테이블 설계 포인트:**
-> - `todo` 테이블에 `user_id` 컬럼을 두고, `member(user_id)`를 외래키로 지정했습니다.
-> - 따라서 특정 사용자가 로그인하면 `WHERE user_id = ?` 조건으로 **본인의 할 일만 정확하게 필터링**할 수 있습니다.
 
 ---
 
-## Step 1: 데이터 모델 (DTO) 작성
+## Step 2: MySQL 연결 클래스 작성 (`ConnectionProvider.java`)
 
-데이터베이스의 테이블 레코드 1행을 담아줄 자바 객체입니다.
+`C:\Users\user\Desktop\custom_project_jdbc`에서 사용하던 검증된 MySQL 연결 코드를 그대로 가져옵니다.
 
-### 1.1 `Member.java`
+- **파일 위치**: `src/main/java/com/kyobo/web/config/ConnectionProvider.java` (기존 빈 클래스 수정)
+
+```java
+package com.kyobo.web.config;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class ConnectionProvider {
+
+    private static final String URL =
+            "jdbc:mysql://localhost:3306/kyobo"
+                    + "?serverTimezone=Asia/Seoul"
+                    + "&characterEncoding=UTF-8"
+                    + "&useSSL=false"
+                    + "&allowPublicKeyRetrieval=true";
+
+    private static final String USER = "root";
+    private static final String PASSWORD = "0000";
+
+    public static Connection getConnection() throws SQLException {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("MySQL JDBC 드라이버를 찾을 수 없습니다.", e);
+        }
+
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+}
+```
+
+---
+
+## Step 3: 데이터 모델(DTO) 정비
+
+### 3.1 `Member.java` (기존 파일 수정)
+DB의 `password` 컬럼을 검증하고 다루기 위해 `password` 필드와 생성자를 추가합니다.
+
 - **파일 위치**: `src/main/java/com/kyobo/web/model/Member.java`
 
 ```java
@@ -206,8 +289,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 회원 정보 DTO
- * 세션(HttpSession)에 저장되므로 Serializable을 구현합니다.
+ * 세션 및 DB 연동 회원 정보 객체
  */
 public class Member implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -215,6 +297,7 @@ public class Member implements Serializable {
     private String userId;
     private String password;
     private String name;
+    private String email;
     private LocalDateTime createdAt;
 
     public Member() {}
@@ -223,6 +306,13 @@ public class Member implements Serializable {
         this.userId = userId;
         this.password = password;
         this.name = name;
+    }
+
+    public Member(String userId, String name, String email, String password) {
+        this.userId = userId;
+        this.name = name;
+        this.email = email;
+        this.password = password;
     }
 
     public String getUserId() {
@@ -249,6 +339,14 @@ public class Member implements Serializable {
         this.name = name;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -256,12 +354,22 @@ public class Member implements Serializable {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    @Override
+    public String toString() {
+        return "Member{" +
+                "userId='" + userId + '\'' +
+                ", name='" + name + '\'' +
+                '}';
+    }
 }
 ```
 
 ---
 
-### 1.2 `TodoItem.java`
+### 3.2 `TodoItem.java` (신규 파일 작성)
+할 일 1건을 담는 객체입니다.
+
 - **파일 위치**: `src/main/java/com/kyobo/web/model/TodoItem.java`
 
 ```java
@@ -269,9 +377,6 @@ package com.kyobo.web.model;
 
 import java.time.LocalDateTime;
 
-/**
- * TODO 항목 DTO
- */
 public class TodoItem {
     private Long id;
     private String userId;
@@ -331,11 +436,9 @@ public class TodoItem {
 
 ---
 
-## Step 2: 데이터 접근 객체 (DAO) 작성
+## Step 4: 데이터 접근 객체(DAO) 작성
 
-`ConnectionProvider`를 사용하여 데이터베이스에 SQL을 전송하고 결과를 받아오는 계층입니다.
-
-### 2.1 회원 DAO: `MemberDao.java` & `JdbcMemberDao.java`
+### 4.1 회원 DAO: `MemberDao.java` & `JdbcMemberDao.java`
 
 - **인터페이스 위치**: `src/main/java/com/kyobo/web/dao/MemberDao.java`
 
@@ -406,7 +509,7 @@ public class JdbcMemberDao implements MemberDao {
 
 ---
 
-### 2.2 할 일 DAO: `TodoDao.java` & `JdbcTodoDao.java`
+### 4.2 할 일 DAO: `TodoDao.java` & `JdbcTodoDao.java`
 
 - **인터페이스 위치**: `src/main/java/com/kyobo/web/dao/TodoDao.java`
 
@@ -454,6 +557,7 @@ public class JdbcTodoDao implements TodoDao {
 
     @Override
     public List<TodoItem> findByUserId(String userId) throws SQLException {
+        // [중요] 로그인한 사용자 본인의 아이디로만 필터링!
         String sql = "SELECT id, user_id, content, is_done, created_at FROM todo WHERE user_id = ? ORDER BY id DESC";
         List<TodoItem> list = new ArrayList<>();
         try (Connection conn = ConnectionProvider.getConnection();
@@ -489,7 +593,7 @@ public class JdbcTodoDao implements TodoDao {
 
     @Override
     public boolean toggleDone(long id, String userId) throws SQLException {
-        // 보안 검증: 다른 사람의 할 일을 수정할 수 없도록 user_id 조건을 반드시 포함합니다!
+        // [보안] 다른 사람의 할 일을 수정할 수 없도록 user_id 조건을 반드시 명시합니다.
         String sql = "UPDATE todo SET is_done = NOT is_done WHERE id = ? AND user_id = ?";
         try (Connection conn = ConnectionProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -501,7 +605,7 @@ public class JdbcTodoDao implements TodoDao {
 
     @Override
     public boolean delete(long id, String userId) throws SQLException {
-        // 보안 검증: 다른 사람의 할 일을 삭제할 수 없도록 user_id 조건을 반드시 포함합니다!
+        // [보안] 다른 사람의 할 일을 삭제할 수 없도록 user_id 조건을 반드시 명시합니다.
         String sql = "DELETE FROM todo WHERE id = ? AND user_id = ?";
         try (Connection conn = ConnectionProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -513,17 +617,11 @@ public class JdbcTodoDao implements TodoDao {
 }
 ```
 
-> **🔒 보안 팁 (데이터 격리)**:  
-> `toggleDone()`과 `delete()` 메서드를 보면 SQL 조건에 `WHERE id = ? AND user_id = ?`로 `user_id`를 함께 넣었습니다.  
-> 이렇게 하면 URL 파라미터를 임의로 조작하더라도 다른 회원의 TODO를 건드릴 수 없습니다.
-
 ---
 
-## Step 3: 비즈니스 로직 (Service) 작성
+## Step 5: 비즈니스 로직(Service) 작성
 
-서블릿과 DAO 사이에 위치하여 유효성 검증과 비즈니스 로직을 처리하는 계층입니다.
-
-### 3.1 `MemberService.java`
+### 5.1 `MemberService.java` (신규 파일 작성)
 - **파일 위치**: `src/main/java/com/kyobo/web/service/MemberService.java`
 
 ```java
@@ -541,23 +639,20 @@ public class MemberService {
         this.memberDao = memberDao;
     }
 
-    /**
-     * 로그인 검증 메서드
-     */
     public Member login(String userId, String password) throws Exception {
         if (userId == null || userId.isBlank() || password == null || password.isBlank()) {
             throw new IllegalArgumentException("아이디와 비밀번호를 모두 입력해주세요.");
         }
 
         Optional<Member> memberOpt = memberDao.findByIdAndPassword(userId.trim(), password.trim());
-        return memberOpt.orElse(null); // 일치하는 회원이 없으면 null 반환
+        return memberOpt.orElse(null);
     }
 }
 ```
 
 ---
 
-### 3.2 `TodoService.java`
+### 5.2 `TodoService.java` (신규 파일 작성)
 - **파일 위치**: `src/main/java/com/kyobo/web/service/TodoService.java`
 
 ```java
@@ -605,12 +700,11 @@ public class TodoService {
 
 ---
 
-## Step 4: 컨트롤러 (Servlet) 작성
+## Step 6: 컨트롤러(Servlet) 작성 및 수정
 
-브라우저의 요청을 받아 Service를 호출하고 JSP 화면으로 연결해 주는 서블릿입니다.
+### 6.1 `LoginServlet.java` (기존 파일 수정)
+기존의 하드코딩 검증 방식(`authenticate()`)을 **`MemberService`를 통한 MySQL DB 조회**로 교체하고, 로그인 성공 시 메인 화면 대신 곧바로 **`/todo` 화면으로 이동**하도록 변경합니다.
 
-### 4.1 `LoginServlet.java` (로그인 컨트롤러)
-- **URL 매핑**: `/login`
 - **파일 위치**: `src/main/java/com/kyobo/web/controller/LoginServlet.java`
 
 ```java
@@ -634,56 +728,57 @@ public class LoginServlet extends HttpServlet {
 
     @Override
     public void init() {
+        // DB와 연결된 Service 초기화
         memberService = new MemberService(new JdbcMemberDao());
     }
 
-    /**
-     * GET 요청: 로그인 화면 보여주기
-     */
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        // 이미 로그인되어 있으면 곧바로 TODO 목록으로 이동
-        HttpSession session = req.getSession(false);
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        // 이미 로그인되어 있으면 곧바로 TODO 화면으로 이동
+        HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("loginUser") != null) {
-            res.sendRedirect(req.getContextPath() + "/todo");
+            response.sendRedirect(request.getContextPath() + "/todo");
             return;
         }
 
         // 로그인 폼 JSP로 이동
-        req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, res);
+        request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
     }
 
-    /**
-     * POST 요청: 아이디/비밀번호 검증 및 세션 생성
-     */
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        req.setCharacterEncoding("UTF-8");
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-        String userId = req.getParameter("userId");
-        String password = req.getParameter("password");
+        // 한글 인코딩 설정 필수 (백종민, 김유진 등 한글 아이디 지원)
+        request.setCharacterEncoding("UTF-8");
+
+        String userId = request.getParameter("userId");
+        String password = request.getParameter("password");
 
         try {
-            Member member = memberService.login(userId, password);
+            // MySQL DB에서 사용자 인증
+            Member authMember = memberService.login(userId, password);
 
-            if (member != null) {
-                // 로그인 성공 -> 세션에 저장
-                HttpSession session = req.getSession(true);
-                session.setAttribute("loginUser", member);
+            if (authMember != null) {
+                // [인증 성공]
+                HttpSession session = request.getSession(true);
+                session.setAttribute("loginUser", authMember);
                 session.setMaxInactiveInterval(1800); // 30분 유지
 
-                // TODO 목록으로 리다이렉트
-                res.sendRedirect(req.getContextPath() + "/todo");
+                // TODO 페이지로 리다이렉트
+                response.sendRedirect(request.getContextPath() + "/todo");
             } else {
-                // 로그인 실패
-                req.setAttribute("errorMessage", "아이디 또는 비밀번호가 올바르지 않습니다.");
-                req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, res);
+                // [인증 실패]
+                request.setAttribute("errorMessage", "아이디 또는 비밀번호가 올바르지 않습니다.");
+                request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
             }
         } catch (IllegalArgumentException e) {
-            req.setAttribute("errorMessage", e.getMessage());
-            req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, res);
+            request.setAttribute("errorMessage", e.getMessage());
+            request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
         } catch (Exception e) {
-            throw new ServletException("로그인 처리 중 오류가 발생했습니다.", e);
+            throw new ServletException("로그인 처리 중 데이터베이스 오류가 발생했습니다.", e);
         }
     }
 }
@@ -691,45 +786,16 @@ public class LoginServlet extends HttpServlet {
 
 ---
 
-### 4.2 `LogoutServlet.java` (로그아웃 컨트롤러)
-- **URL 매핑**: `/logout`
+### 6.2 `LogoutServlet.java` (기존 유지 확인)
+기존에 작성되어 있던 로그아웃 서블릿은 그대로 유지하면 됩니다. 세션을 파기하고 로그인 페이지로 보냅니다.
+
 - **파일 위치**: `src/main/java/com/kyobo/web/controller/LogoutServlet.java`
 
-```java
-package com.kyobo.web.controller;
-
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-
-import java.io.IOException;
-
-@WebServlet("/logout")
-public class LogoutServlet extends HttpServlet {
-
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        HttpSession session = req.getSession(false);
-        if (session != null) {
-            session.invalidate(); // 세션 삭제
-        }
-        res.sendRedirect(req.getContextPath() + "/login");
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        doGet(req, res);
-    }
-}
-```
-
 ---
 
-### 4.3 `TodoServlet.java` (TODO 메인 컨트롤러)
-- **URL 매핑**: `/todo`
+### 6.3 `TodoServlet.java` (신규 파일 작성)
+로그인 세션을 검사하여 **본인의 아이디(`loginUser.getUserId()`)**로만 조회/추가/토글/삭제를 수행합니다.
+
 - **파일 위치**: `src/main/java/com/kyobo/web/controller/TodoServlet.java`
 
 ```java
@@ -757,19 +823,19 @@ public class TodoServlet extends HttpServlet {
     }
 
     /**
-     * GET 요청: 현재 로그인한 사용자의 TODO 목록 조회
+     * GET 요청: 로그인 사용자의 TODO 목록 조회
      */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         Member loginUser = getLoginUser(req);
         if (loginUser == null) {
-            // 로그인되어 있지 않으면 로그인 페이지로 보냄
+            // 미로그인 시 로그인 페이지로 강제 리다이렉트
             res.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
         try {
-            // 로그인한 사용자의 아이디로 할 일 목록 가져오기
+            // 본인 아이디의 할 일 목록만 조회
             req.setAttribute("todos", todoService.getTodoList(loginUser.getUserId()));
             req.getRequestDispatcher("/WEB-INF/views/todo/list.jsp").forward(req, res);
         } catch (Exception e) {
@@ -778,7 +844,7 @@ public class TodoServlet extends HttpServlet {
     }
 
     /**
-     * POST 요청: 추가(add), 토글(toggle), 삭제(delete) 동작 처리
+     * POST 요청: 할 일 추가(add), 완료 토글(toggle), 삭제(delete)
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
@@ -805,7 +871,7 @@ public class TodoServlet extends HttpServlet {
                 todoService.removeTodo(id, currentUserId);
             }
 
-            // 작업 완료 후 목록으로 리다이렉트 (새로고침 시 중복 요청 방지 - PRG 패턴)
+            // 요청 완료 후 리다이렉트 (PRG 패턴: 브라우저 새로고침 시 폼 재전송 방지)
             res.sendRedirect(req.getContextPath() + "/todo");
         } catch (IllegalArgumentException e) {
             req.getSession().setAttribute("flashError", e.getMessage());
@@ -815,9 +881,6 @@ public class TodoServlet extends HttpServlet {
         }
     }
 
-    /**
-     * 세션에서 로그인된 사용자 정보를 꺼내는 헬퍼 메서드
-     */
     private Member getLoginUser(HttpServletRequest req) {
         HttpSession session = req.getSession(false);
         if (session != null) {
@@ -830,15 +893,14 @@ public class TodoServlet extends HttpServlet {
 
 ---
 
-## Step 5: 화면 뷰 (JSP & CSS) 작성
+## Step 7: 화면 뷰(JSP & CSS) 작성
 
-로그인 폼과 TODO 리스트를 직관적이고 깔끔하게 보여주는 UI를 작성합니다.
+기존 로그인 디자인과 일관되면서도, 깔끔한 카드 스타일과 완료 체크 표시를 제공합니다.
 
-### 5.1 UI 전용 스타일시트 (`assets/css/todo.css`)
+### 7.1 `assets/css/todo.css` (신규 스타일시트)
 - **파일 위치**: `src/main/webapp/assets/css/todo.css`
 
 ```css
-/* 전역 기본 스타일 */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -847,50 +909,47 @@ public class TodoServlet extends HttpServlet {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-    background-color: #f4f6f9;
+    background-color: #f0f2f5;
     color: #2c3e50;
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 24px 16px;
 }
 
-/* 카드 컨테이너 */
 .app-card {
     background: #ffffff;
     width: 100%;
     max-width: 480px;
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(149, 157, 165, 0.2);
-    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
     padding: 32px 28px;
 }
 
-/* 헤더 영역 */
 .app-header {
-    margin-bottom: 24px;
     text-align: center;
+    margin-bottom: 24px;
 }
 
 .app-title {
     font-size: 24px;
     font-weight: 700;
     color: #1a202c;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .app-subtitle {
-    font-size: 14px;
+    font-size: 13px;
     color: #718096;
 }
 
-/* 사용자 정보 바 */
 .user-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #edf2f7;
+    background: #ebf8ff;
+    border: 1px solid #bee3f8;
     padding: 10px 16px;
     border-radius: 8px;
     margin-bottom: 20px;
@@ -899,11 +958,7 @@ body {
 .user-badge {
     font-size: 14px;
     font-weight: 600;
-    color: #2d3748;
-}
-
-.user-badge span {
-    color: #3182ce;
+    color: #2b6cb0;
 }
 
 .btn-logout {
@@ -912,7 +967,7 @@ body {
     text-decoration: none;
     font-weight: 600;
     border: 1px solid #feb2b2;
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 4px;
     background: #fff;
     transition: all 0.2s;
@@ -923,7 +978,6 @@ body {
     color: #fff;
 }
 
-/* 폼 스타일 */
 .form-group {
     margin-bottom: 16px;
 }
@@ -968,11 +1022,10 @@ body {
     background-color: #2b6cb0;
 }
 
-/* TODO 입력 인풋바 */
 .todo-input-form {
     display: flex;
     gap: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .todo-input-form input {
@@ -993,7 +1046,6 @@ body {
     background-color: #2b6cb0;
 }
 
-/* TODO 목록 리스트 */
 .todo-list {
     list-style: none;
 }
@@ -1007,11 +1059,6 @@ body {
     border: 1px solid #edf2f7;
     border-radius: 8px;
     margin-bottom: 10px;
-    transition: background-color 0.2s;
-}
-
-.todo-item:hover {
-    background: #edf2f7;
 }
 
 .todo-content-box {
@@ -1035,7 +1082,6 @@ body {
     word-break: break-all;
 }
 
-/* 완료된 상태 스타일 (취소선 & 흐리게) */
 .todo-item.done .todo-text {
     text-decoration: line-through;
     color: #a0aec0;
@@ -1055,7 +1101,6 @@ body {
     color: #e53e3e;
 }
 
-/* 빈 목록 알림 */
 .empty-state {
     text-align: center;
     padding: 30px 10px;
@@ -1063,7 +1108,6 @@ body {
     font-size: 14px;
 }
 
-/* 에러 메시지 */
 .error-box {
     background-color: #fff5f5;
     color: #c53030;
@@ -1075,7 +1119,6 @@ body {
     border: 1px solid #fed7d7;
 }
 
-/* 힌트 박스 */
 .hint-box {
     margin-top: 20px;
     background-color: #f7fafc;
@@ -1083,15 +1126,14 @@ body {
     border-radius: 6px;
     font-size: 12px;
     color: #718096;
-    line-height: 1.5;
+    line-height: 1.6;
 }
 ```
 
 ---
 
-### 5.2 `login.jsp` (로그인 폼 화면)
+### 7.2 `WEB-INF/views/login.jsp` (기존 폼 업데이트)
 - **파일 위치**: `src/main/webapp/WEB-INF/views/login.jsp`
-- `jakarta.tags.core` JSTL 라이브러리를 사용하여 에러 메시지를 깔끔하게 렌더링합니다.
 
 ```jsp
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
@@ -1108,8 +1150,8 @@ body {
 
 <div class="app-card">
     <div class="app-header">
-        <h1 class="app-title">TODO LIST</h1>
-        <p class="app-subtitle">로그인하여 본인의 할 일 목록을 관리하세요</p>
+        <h1 class="app-title">로그인</h1>
+        <p class="app-subtitle">내 TODO LIST 서비스를 이용하려면 로그인하세요</p>
     </div>
 
     <!-- 에러 메시지 표시 -->
@@ -1122,19 +1164,19 @@ body {
     <form action="${pageContext.request.contextPath}/login" method="post">
         <div class="form-group">
             <label class="form-label" for="userId">아이디</label>
-            <input class="form-input" type="text" id="userId" name="userId" required placeholder="아이디를 입력하세요">
+            <input class="form-input" type="text" id="userId" name="userId" required placeholder="아이디 입력">
         </div>
 
         <div class="form-group">
             <label class="form-label" for="password">비밀번호</label>
-            <input class="form-input" type="password" id="password" name="password" required placeholder="비밀번호를 입력하세요">
+            <input class="form-input" type="password" id="password" name="password" required placeholder="비밀번호 입력">
         </div>
 
         <button type="submit" class="btn-primary">로그인</button>
     </form>
 
     <div class="hint-box">
-        <strong>💡 테스트 계정 안내:</strong><br>
+        <strong>💡 등록된 테스트 계정:</strong><br>
         - 아이디: <code>백종민</code> / 비밀번호: <code>1234</code><br>
         - 아이디: <code>김유진</code> / 비밀번호: <code>1234</code>
     </div>
@@ -1146,9 +1188,8 @@ body {
 
 ---
 
-### 5.3 `todo/list.jsp` (할 일 관리 화면)
+### 7.3 `WEB-INF/views/todo/list.jsp` (신규 TODO 메인 화면)
 - **파일 위치**: `src/main/webapp/WEB-INF/views/todo/list.jsp`
-- 체크박스 클릭 시 바로 상태를 반전(토글)시키며, 삭제 버튼 클릭 시 항목을 삭제합니다.
 
 ```jsp
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
@@ -1164,15 +1205,15 @@ body {
 <body>
 
 <div class="app-card">
-    <!-- 헤더 및 사용자 식별 영역 -->
+    <!-- 로그인 사용자 헤더 바 -->
     <div class="user-bar">
         <div class="user-badge">
-            👤 <span>${sessionScope.loginUser.name}</span>님의 TODO
+            👤 <span>${sessionScope.loginUser.name}</span>님의 할 일
         </div>
         <a href="${pageContext.request.contextPath}/logout" class="btn-logout">로그아웃</a>
     </div>
 
-    <!-- 임시 에러 메시지(Flash message) 표시 -->
+    <!-- 플래시 에러 메시지 -->
     <c:if test="${not empty sessionScope.flashError}">
         <div class="error-box">
             ${sessionScope.flashError}
@@ -1180,28 +1221,28 @@ body {
         <c:remove var="flashError" scope="session"/>
     </c:if>
 
-    <!-- 할 일 등록 폼 -->
+    <!-- 할 일 등록 입력창 -->
     <form class="todo-input-form" action="${pageContext.request.contextPath}/todo" method="post">
         <input type="hidden" name="action" value="add">
-        <input class="form-input" type="text" name="content" placeholder="새로운 할 일을 입력하세요..." required autofocus>
+        <input class="form-input" type="text" name="content" placeholder="오늘 해야 할 일을 입력하세요..." required autofocus>
         <button type="submit" class="btn-add">추가</button>
     </form>
 
-    <!-- 할 일 목록 출력 -->
+    <!-- 할 일 목록 리스트 -->
     <ul class="todo-list">
         <c:forEach var="todo" items="${todos}">
             <li class="todo-item ${todo.done ? 'done' : ''}">
                 <div class="todo-content-box">
-                    <!-- 완료 토글 버튼 (클릭 시 POST form 자동 제출) -->
+                    <!-- 상태 변경 토글 버튼 (클릭 시 POST) -->
                     <form action="${pageContext.request.contextPath}/todo" method="post" style="display:inline;">
                         <input type="hidden" name="action" value="toggle">
                         <input type="hidden" name="id" value="${todo.id}">
-                        <button type="submit" class="todo-checkbox-btn" title="상태 변경">
+                        <button type="submit" class="todo-checkbox-btn" title="완료 상태 변경">
                             ${todo.done ? '✅' : '⬜'}
                         </button>
                     </form>
 
-                    <!-- 할 일 내용 -->
+                    <!-- 할 일 내용 (완료 시 취소선) -->
                     <span class="todo-text">${todo.content}</span>
                 </div>
 
@@ -1215,10 +1256,10 @@ body {
         </c:forEach>
     </ul>
 
-    <!-- 할 일이 하나도 없을 때 -->
+    <!-- 할 일이 비어있을 때 안내 문구 -->
     <c:if test="${empty todos}">
         <div class="empty-state">
-            아직 등록된 할 일이 없습니다.<br>오늘 해야 할 일을 등록해보세요!
+            등록된 할 일이 없습니다.<br>새로운 할 일을 추가해보세요!
         </div>
     </c:if>
 </div>
@@ -1229,64 +1270,107 @@ body {
 
 ---
 
-## Step 6: 실행 및 테스트 시나리오
+### 7.4 `main.jsp` (선택 수정: 메인 화면에 TODO 링크 추가)
+기존 `main.jsp`에 로그인 상태일 때 [내 TODO 관리] 버튼을 추가해주면 더욱 편리하게 이동할 수 있습니다.
 
-모든 코드를 작성했다면 이제 테스트를 진행합니다.
+- **파일 위치**: `src/main/webapp/main.jsp`
 
-### 1. DB 스크립트 실행
-- MySQL Workbench 등에서 `sql/todo_schema.sql` 내용을 실행하여 `member`와 `todo` 테이블을 생성합니다.
+```jsp
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="com.kyobo.web.model.Member" %>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>메인 화면</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background-color: #fafafa; }
+        .card { background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .btn { display: inline-block; padding: 8px 16px; text-decoration: none; border-radius: 4px; margin-top: 10px; margin-right: 6px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .user-info { background: #f0f8ff; padding: 15px; border-radius: 6px; margin: 15px 0; }
+    </style>
+</head>
+<body>
 
-### 2. 톰캣(Tomcat) 서버 구동
-- IntelliJ IDEA의 Smart Tomcat 또는 Gradle Run으로 서버를 시작합니다.
+<div class="card">
+    <h1>교보 실습 웹 애플리케이션</h1>
+    <hr>
 
-### 3. 테스트 시나리오 진행
+    <%
+        Member loginUser = (Member) session.getAttribute("loginUser");
+    %>
 
-```text
-[시나리오 1: 비로그인 접근 차단]
-1. 브라우저에서 http://localhost:8080/custom_project_jdbc/todo 접속
-2. 결과: 세션이 없으므로 자동으로 http://localhost:8080/custom_project_jdbc/login 으로 리다이렉트됨
+    <% if (loginUser != null) { %>
+        <div class="user-info">
+            <h3>환영합니다, <%= loginUser.getName() %>님!</h3>
+            <p><strong>아이디:</strong> <%= loginUser.getUserId() %></p>
+        </div>
+        <p>현재 정상적으로 로그인된 상태입니다.</p>
+        <!-- TODO 리스트 바로가기 버튼 추가 -->
+        <a href="<%= request.getContextPath() %>/todo" class="btn btn-success">내 TODO 리스트 가기</a>
+        <a href="<%= request.getContextPath() %>/logout" class="btn btn-danger">로그아웃</a>
+    <% } else { %>
+        <p>현재 로그인되어 있지 않습니다. 서비스를 이용하려면 로그인해주세요.</p>
+        <a href="<%= request.getContextPath() %>/login" class="btn btn-primary">로그인하러 가기</a>
+    <% } %>
+</div>
 
-[시나리오 2: 백종민 로그인 및 할 일 관리]
-1. 아이디 '백종민', 비밀번호 '1234' 입력 후 로그인 버튼 클릭
-2. 상단에 '👤 백종민님의 TODO' 표시 확인
-3. '백종민'의 기존 할 일 리스트가 나타나는지 확인
-4. 할 일 입력창에 "JDBC 실습 완료하기" 입력 후 [추가] 클릭 -> 목록 최상단에 추가됨
-5. 체크박스(⬜) 클릭 -> 체크 표시(✅)로 바뀌고 텍스트에 취소선이 그어지는지 확인
-6. [우측 상단 로그아웃] 클릭 -> 로그인 페이지로 복귀
-
-[시나리오 3: 김유진 로그인 및 데이터 격리 검증]
-1. 아이디 '김유진', 비밀번호 '1234' 입력 후 로그인
-2. 상단에 '👤 김유진님의 TODO' 표시 확인
-3. 방금 '백종민' 계정에서 추가한 "JDBC 실습 완료하기"는 보이지 않고, 오직 '김유진'의 할 일만 노출되는지 확인
-4. 정상적으로 사용자별 TODO가 분리되어 있으면 완벽히 성공!
+</body>
+</html>
 ```
 
 ---
 
-## 자주 묻는 질문 & 트러블슈팅 (FAQ)
+## Step 8: 실행 및 동작 테스트 시나리오
 
-### Q1. 한글 아이디(`백종민`, `김유진`)로 로그인할 때 일치하지 않는다고 나와요.
-- **원인**: 서블릿 요청 시 한글 인코딩이 깨진 상태로 파라미터를 읽어왔기 때문입니다.
-- **해결**: 모든 서블릿의 `doPost()` 첫 줄에 반드시 아래 코드가 있는지 확인하세요:
-  ```java
-  req.setCharacterEncoding("UTF-8");
-  ```
-- 또한 `ConnectionProvider`의 JDBC URL에 `characterEncoding=UTF-8` 옵션이 들어가 있는지 확인하세요.
+`Survlet_practice` 환경에서의 테스트 절차입니다. (URL Context Path는 `/Survlet_practice` 기준입니다)
 
-### Q2. `c:forEach` 태그나 `${todos}` EL 표현식이 브라우저에 그대로 글자로 나와요.
-- **원인**: JSP 파일 상단에 Jakarta용 JSTL 태그 라이브러리 지시자가 누락되었거나 버전이 맞지 않는 경우입니다.
-- **해결**: JSP 최상단에 아래 코드가 정확히 선언되어 있어야 합니다.
-  ```jsp
-  <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-  ```
-  *(과거 버전의 `http://java.sun.com/jsp/jstl/core`가 아니라 **`jakarta.tags.core`**여야 합니다!)*
+### 1. MySQL 스크립트 실행
+- MySQL Workbench 등에서 `sql/todo_schema.sql`을 실행하여 `member`와 `todo` 테이블을 생성합니다.
 
-### Q3. "다른 사람의 TODO를 수정하거나 지울 수 없나요?"
-- **답변**: 본 가이드의 `JdbcTodoDao`에서는 `UPDATE`와 `DELETE` 쿼리에 다음과 같이 조건을 걸었습니다:
-  ```sql
-  WHERE id = ? AND user_id = ?
-  ```
-  따라서 악의적인 사용자가 다른 사람의 `id`를 가로채서 요청하더라도, 세션에 저장된 본인의 `user_id`와 일치하지 않으면 쿼리가 적용되지 않아 안전합니다.
+### 2. Gradle 동기화 및 톰캣 실행
+- `build.gradle`의 종속성이 내려받아졌는지 확인한 후, IntelliJ의 Tomcat 서버를 실행합니다.
 
-### Q4. 세션 타임아웃은 어떻게 조절하나요?
-- `LoginServlet.java`에서 `session.setMaxInactiveInterval(1800);`로 30분(1800초) 설정되어 있습니다. 원하는 시간(초)으로 변경할 수 있습니다.
+### 3. 단계별 검증 시나리오
+
+```text
+[검증 1: 비로그인 접근 차단 확인]
+- 브라우저 주소창에 입력: http://localhost:8080/Survlet_practice/todo
+- 결과: 로그인되지 않았으므로 자동으로 http://localhost:8080/Survlet_practice/login 으로 리다이렉트됨
+
+[검증 2: '백종민' 계정 로그인 & TODO 관리]
+- 아이디: 백종민 / 비밀번호: 1234 입력 후 [로그인]
+- 결과: 상단에 "👤 백종민님의 할 일" 표시
+- 목록에 '백종민'의 할 일 2건만 조회되는지 확인
+- 입력창에 "Gradle 빌드 검증" 입력 후 [추가] -> 상단에 즉시 추가됨
+- 네모 박스(⬜) 클릭 -> 체크 표시(✅)로 바뀌고 취소선 표시 확인
+- [우측 상단 로그아웃] 클릭 -> 로그인 화면으로 이동
+
+[검증 3: '김유진' 계정 로그인 & 사용자별 데이터 격리 확인]
+- 아이디: 김유진 / 비밀번호: 1234 입력 후 [로그인]
+- 결과: 상단에 "👤 김유진님의 할 일" 표시
+- 방금 '백종민' 계정에서 추가한 "Gradle 빌드 검증"은 보이지 않고, 오직 '김유진'의 할 일만 노출되는지 확인
+- 정상적으로 격리되어 있다면 구현 완료!
+```
+
+---
+
+## 초보자 트러블슈팅 & 자주 묻는 질문 (FAQ)
+
+### Q1. Gradle에 라이브러리를 추가했는데 코드에 빨간 줄이 떠요.
+- `build.gradle`에 코드를 붙여넣기만 하면 자동으로 다운로드되지 않습니다.  
+  IntelliJ 오른쪽 패널의 **Gradle 탭 > 새로고침(파란색 회전 화살표)** 버튼을 누르거나, 에디터 우측 상단에 뜨는 **코끼리 새로고침 아이콘**을 반드시 클릭해주세요.
+
+### Q2. 한글 아이디(`백종민`, `김유진`) 입력 시 로그인이 안 돼요.
+- 서블릿의 `doPost()` 첫 줄에 반드시 `request.setCharacterEncoding("UTF-8");`이 선언되어 있어야 파라미터가 깨지지 않습니다.
+- 또한 `ConnectionProvider`의 접속 URL 파라미터에 `&characterEncoding=UTF-8`이 포함되어 있는지 확인하세요.
+
+### Q3. `Communications link failure` 또는 `Access denied` DB 에러가 발생해요.
+- `ConnectionProvider.java`에서 설정한 MySQL 포트(`3306`), 데이터베이스 이름(`kyobo`), 계정(`root`), 비밀번호(`0000`)가 본인의 로컬 MySQL 설치 환경과 일치하는지 확인하세요.
+
+### Q4. 왜 URL 주소에 `/Survlet_practice`가 붙나요?
+- 서블릿 컨테이너(Tomcat)에서 프로젝트의 **Context Path**를 `/Survlet_practice`로 지정했기 때문입니다.  
+  코드 작성 시 `<%= request.getContextPath() %>` 또는 JSTL `${pageContext.request.contextPath}`를 사용하면 Context Path가 바뀌어도 유연하게 동작합니다.

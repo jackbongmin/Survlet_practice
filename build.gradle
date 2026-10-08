@@ -12,4 +12,11 @@ repositories {
 
 dependencies {
     compileOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+
+    // 1. MySQL JDBC 드라이버 추가
+    implementation 'com.mysql:mysql-connector-j:9.5.0'
+
+    // 2. Jakarta JSTL 라이브러리 추가
+    implementation 'jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api:3.0.1'
+    implementation 'org.glassfish.web:jakarta.servlet.jsp.jstl:3.0.1'
 }
