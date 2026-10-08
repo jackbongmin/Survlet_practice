@@ -1,6 +1,8 @@
 package com.kyobo.web.controller;
 
+import com.kyobo.web.dao.JdbcMemberDao;
 import com.kyobo.web.model.Member;
+import com.kyobo.web.service.MemberService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -12,6 +14,14 @@ import java.io.IOException;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
+
+    private MemberService memberService;
+
+    @Override
+    public void init() {
+        // 서블릿이 처음 생성될 때 DAO와 Service 객체를 준비한다.
+        memberService = new MemberService(new JdbcMemberDao());
+    }
 
     /**
      * Get 요청 : 로그인 페이지 열기
@@ -45,41 +55,35 @@ public class LoginServlet extends HttpServlet {
         String userId = request.getParameter("userId");
         String password = request.getParameter("password");
 
-        // [인증 로직]
-        // 실무에서는 DB연동 및 암호화를 사용하지만 1단계에서는 하드코딩된 예제 데이터로 검증 흐름을 먼저 익혀야함.
-        Member authMember = authenticate(userId, password);
+        try {
+            // Service 계층을 통해 MySQL DB에서 회원 일치 여부를 검증합니다.
+            Member authMember = memberService.login(userId, password);
 
-        if(authMember != null) {
-            // [인증 성공]
-            // 1. 새로은 세션을 생성하거나 기존 세션 획득
-            HttpSession session = request.getSession(true);
+            if (authMember != null) {
+                // [로그인 성공]
+                // 1. 세션 생성 (true: 없으면 신규 생성)
+                HttpSession session = request.getSession(true);
 
-            // 2. 세션에 로그인 사용자 객체 저장
-            session.setAttribute("loginUser", authMember);
+                // 2. 세션 메모리에 로그인한 사용자 객체를 저장 (이 객체로 사용자를 계속 식별함)
+                session.setAttribute("loginUser", authMember);
 
-            // 3. 세션 유지 시간 설정 (초 단위 : 30분 ~ 1800초)
-            session.setMaxInactiveInterval(1800);
+                // 3. 세션 유지 시간: 1800초 (30분 동안 동작이 없으면 자동 만료)
+                session.setMaxInactiveInterval(1800);
 
-            // 4. 로그인 성공 후 메인 페이지로 리다이렉트
-            response.sendRedirect(request.getContextPath() + "/main.jsp");
-        } else {
-            // [인증 실패]
-            // request에 에러 메세지를 담고 다시로그인 JSP로 포워딩
-            request.setAttribute("errorMessage", "아이디 또는 비밀번호가 올바르지 않습니다.");
+                // 4. 로그인 성공 후 TODO 화면으로 리다이렉트
+                response.sendRedirect(request.getContextPath() + "/todo");
+            } else {
+                // [로그인 실패]
+                // 에러 메시지를 request에 싣고 다시 로그인 JSP 화면으로 돌아갑니다.
+                request.setAttribute("errorMessage", "아이디 또는 비밀번호가 올바르지 않습니다.");
+                request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
+            }
+        } catch (IllegalArgumentException e) {
+            // 빈칸 등의 유효성 오류 발생 시
+            request.setAttribute("errorMessage", e.getMessage());
             request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
+        } catch (Exception e) {
+            throw new ServletException("로그인 처리 중 데이터베이스 오류가 발생했습니다.", e);
         }
-
     }
-    /**
-     *  간이 인증 메서드(추후 DB조회 DAO로 대체 가능)
-     */
-    private Member authenticate(String userId, String password) {
-        if ("admin".equals(userId) && "1234".equals(password)) {
-            return new Member("admin", "관리자", "admin@kyobo.com");
-        } else if ("user1".equals(userId) && "1234".equals(password)) {
-            return new Member("user1", "백종민", "user1@kyobo.com");
-        }
-        return null;
-    }
-
 }

@@ -22,7 +22,7 @@ public class TodoService {
         if(content == null || content.isBlank()) {
             throw new IllegalArgumentException("할 일 내용을 입력해주세요.");
         }
-        TodoItem = new TodoItem(userId, content.trim());
+        TodoItem item = new TodoItem(userId, content.trim());
         return todoDao.insert(item);
     }
 
