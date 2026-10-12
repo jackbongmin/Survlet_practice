@@ -17,17 +17,13 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * 타임라인 피드형 게시판 컨트롤러
- * - @MultipartConfig: 이미지 파일 업로드 지원
- */
 @WebServlet("/board")
 @MultipartConfig(
-        fileSizeThreshold = 1024 * 1024,    // 1MB 이상 시 디스크 임시 저장
-        maxFileSize = 1024 * 1024 * 10,     // 개별 파일 최대 10MB
-        maxRequestSize = 1024 * 1024 * 20   // 전체 요청 최대 20MB
+        fileSizeThreshold = 1024 * 1024,      // 1MB 이상 시 임시 디스크 사용
+        maxFileSize = 1024 * 1024 * 10,       // 업로드 파일 최대 10MB
+        maxRequestSize = 1024 * 1024 * 20     // 전체 요청 최대 20MB
 )
-public class BoardServlet extends HttpServlet{
+public class BoardServlet extends HttpServlet {
 
     private BoardService boardService;
 
@@ -41,24 +37,22 @@ public class BoardServlet extends HttpServlet{
     }
 
     @Override
-    protected  void doGet(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         Member loginUser = getLoginUser(req);
-        if(loginUser == null) {
+        if (loginUser == null) {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
         String action = req.getParameter("action");
         String view = req.getParameter("view");
-        if(view == null || view.isBlank()) {
-            view = "feed"   // 기본 뷰는 피드형
+        if (view == null || view.isBlank()) {
+            view = "feed"; // 기본 뷰는 타임라인 피드형
         }
 
         try {
-            if("edit".equals(action)) {
-                // 수정화면 포워드
+            // [1] 수정 화면 이동
+            if ("edit".equals(action)) {
                 Long postId = Long.parseLong(req.getParameter("postId"));
                 BoardPost post = boardService.getPostForEdit(postId, loginUser.getUserId());
                 req.setAttribute("post", post);
@@ -66,8 +60,8 @@ public class BoardServlet extends HttpServlet{
                 return;
             }
 
-            // 피드 또는 리스트 조회
-            List<BoardPost> posts = boardService.getPostList(loginUser.getUserId());
+            // [2] 피드 / 리스트 목록 조회
+            List<BoardPost> posts = boardService.getFeedPosts(loginUser.getUserId(), 20, 0);
             req.setAttribute("posts", posts);
             req.setAttribute("currentView", view);
 
@@ -83,13 +77,11 @@ public class BoardServlet extends HttpServlet{
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         req.setCharacterEncoding("UTF-8");
 
         Member loginUser = getLoginUser(req);
-        if (longinUser == null) {
+        if (loginUser == null) {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
@@ -99,68 +91,83 @@ public class BoardServlet extends HttpServlet{
 
         try {
             if ("create".equals(action)) {
-                // 1. 글 등록 + 이미지 업로드
+                // 1. 피드 글 등록 + 사진 업로드
                 String title = req.getParameter("title");
                 String content = req.getParameter("content");
                 Part filePart = req.getPart("imageFile");
                 String savedImagePath = processImageUpload(filePart, req);
 
-                boardService.createPost(currentUserId title, content, savedImagePath);
+                boardService.createPost(currentUserId, title, content, savedImagePath);
                 resp.sendRedirect(req.getContextPath() + "/board");
-            } else if ("like".equals(action)) {
-                // 2. 좋아요 토글
-                Long postId = Long.parseLong(req.getParameter("postId"));
 
+            } else if ("update".equals(action)) {
+                // 2. 글 수정 처리
+                Long postId = Long.parseLong(req.getParameter("postId"));
+                String title = req.getParameter("title");
+                String content = req.getParameter("content");
+                Part filePart = req.getPart("imageFile");
+                String newImagePath = processImageUpload(filePart, req);
+
+                boardService.updatePost(postId, currentUserId, title, content, newImagePath);
+                resp.sendRedirect(req.getContextPath() + "/board#post-" + postId);
+
+            } else if ("delete".equals(action)) {
+                // 3. 글 삭제 처리
+                Long postId = Long.parseLong(req.getParameter("postId"));
+                boardService.deletePost(postId, currentUserId);
+                resp.sendRedirect(req.getContextPath() + "/board");
+
+            } else if ("like".equals(action)) {
+                // 4. 좋아요 토글 (PRG 패턴 + 해당 카드로 앵커 이동)
+                Long postId = Long.parseLong(req.getParameter("postId"));
                 boardService.toggleLike(postId, currentUserId);
                 resp.sendRedirect(req.getContextPath() + "/board#post-" + postId);
 
             } else if ("comment".equals(action)) {
-                // 3. 댓글 작성
+                // 5. 댓글 등록
                 Long postId = Long.parseLong(req.getParameter("postId"));
-                String commentText = req.getParameter("commentContent");
-
-                boardService.addComment(postId, currentUserId, commentText);
+                String commentContent = req.getParameter("commentContent");
+                boardService.addComment(postId, currentUserId, commentContent);
                 resp.sendRedirect(req.getContextPath() + "/board#post-" + postId);
 
-            } else if ("delete".equals(action)) {
-                // 4. 글 삭제
+            } else if ("commentDelete".equals(action)) {
+                // 6. 댓글 삭제
+                Long commentId = Long.parseLong(req.getParameter("commentId"));
                 Long postId = Long.parseLong(req.getParameter("postId"));
-
-                boardService.deletePost(postId, currentUserId);
-                resp.sendRedirect(req.getContextPath() + "/board");
+                boardService.deleteComment(commentId, postId, currentUserId);
+                resp.sendRedirect(req.getContextPath() + "/board#post-" + postId);
             }
-        } catch (Exception e) {
+
+        } catch (IllegalArgumentException | SecurityException e) {
             req.getSession().setAttribute("flashError", e.getMessage());
             resp.sendRedirect(req.getContextPath() + "/board");
+        } catch (Exception e) {
+            throw new ServletException("게시판 처리 중 오류 발생", e);
         }
-
     }
 
     private String processImageUpload(Part filePart, HttpServletRequest req) throws IOException {
-        if (filePart == null || filePart.getSize() == 0) {
-            return null;
-        }
-        String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-        if (fileName == null || fileName.isBlank()) return null;
+        if (filePart == null || filePart.getSize() == 0) return null;
 
-        String extension = "";
-        int dotIdx = fileName.lastIndexOf('.');
-        if (dotIdx > 0) extension = fileName.substring(dotIdx);
+        String submittedName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
+        if (submittedName == null || submittedName.isBlank()) return null;
 
-        String uniqueFileName = UUID.randomUUID().toString() + extension;
+        String ext = "";
+        int dot = submittedName.lastIndexOf('.');
+        if (dot >= 0) ext = submittedName.substring(dot);
+
+        String uniqueName = UUID.randomUUID().toString() + ext;
         String uploadDir = req.getServletContext().getRealPath("/assets/uploads/board");
 
         File dir = new File(uploadDir);
         if (!dir.exists()) dir.mkdirs();
 
-        filePart.write(uploadDir + File.separator + uniqueFileName);
-        return "/assets/uploads/board/" + uniqueFileName;
+        filePart.write(uploadDir + File.separator + uniqueName);
+        return "/assets/uploads/board/" + uniqueName;
     }
 
     private Member getLoginUser(HttpServletRequest req) {
         HttpSession session = req.getSession(false);
         return (session != null) ? (Member) session.getAttribute("loginUser") : null;
     }
-
-
 }
