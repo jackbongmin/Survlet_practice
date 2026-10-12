@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<div class="feed-container" style="max-width:800px;">
+<div class="feed-container" style="max-width:920px;">
 
     <!-- 상단 내비게이션 바 -->
     <div class="user-bar">

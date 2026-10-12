@@ -282,3 +282,6 @@
     font-size: 13px;
     cursor: pointer;
 }
+.feed-container .app-card {
+    max-width: 100%;
+}
