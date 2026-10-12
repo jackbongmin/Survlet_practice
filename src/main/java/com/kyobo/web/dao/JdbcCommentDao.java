@@ -16,7 +16,7 @@ public class JdbcCommentDao implements CommentDao {
         c.setAuthorName(rs.getString("author_name"));
         c.setContent(rs.getString("content"));
         Timestamp ts = rs.getTimestamp("created_at");
-        if (ts != null) c.setCreatedAt(ts.toLocalDateTime());
+        if (ts != null) c.setCreatedAt(rs.getTimestamp("created_at"));
         return c;
     }
 

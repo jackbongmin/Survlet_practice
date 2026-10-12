@@ -22,10 +22,10 @@ public class JdbcBoardDao implements BoardDao {
         p.setCommentCount(rs.getInt("comment_count"));
 
         Timestamp cTs = rs.getTimestamp("created_at");
-        if (cTs != null) p.setCreatedAt(cTs.toLocalDateTime());
+        if (cTs != null) p.setCreatedAt(rs.getTimestamp("created_at"));
 
         Timestamp uTs = rs.getTimestamp("updated_at");
-        if (uTs != null) p.setUpdatedAt(uTs.toLocalDateTime());
+        if (uTs != null) p.setUpdatedAt(rs.getTimestamp("created_at"));
 
         return p;
     }

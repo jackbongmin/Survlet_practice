@@ -1,6 +1,7 @@
 package com.kyobo.web.model;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,8 +17,8 @@ public class BoardPost implements Serializable {
     private String imagePath;         // 업로드 이미지 경로 (예: /assets/uploads/board/uuid.png)
     private int likeCount;            // 좋아요 누적 수
     private int commentCount;         // 댓글 누적 수
-    private LocalDateTime createdAt;  // 작성 일시
-    private LocalDateTime updatedAt;  // 수정 일시
+    private Timestamp createdAt;  // 작성 일시
+    private Timestamp updatedAt;  // 수정 일시
 
     // [피드 화면 구성을 위한 확장 필드]
     private boolean likedByMe;        // 현재 로그인한 사용자가 좋아요를 눌렀는지 여부
@@ -57,11 +58,11 @@ public class BoardPost implements Serializable {
     public int getCommentCount() { return commentCount; }
     public void setCommentCount(int commentCount) { this.commentCount = commentCount; }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Timestamp getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
 
     public boolean isLikedByMe() { return likedByMe; }
     public void setLikedByMe(boolean likedByMe) { this.likedByMe = likedByMe; }

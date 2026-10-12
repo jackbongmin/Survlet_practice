@@ -1,6 +1,7 @@
 package com.kyobo.web.model;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 public class BoardComment implements Serializable {
@@ -11,7 +12,7 @@ public class BoardComment implements Serializable {
     private String userId;            // 댓글 작성자 아이디 (FK)
     private String authorName;        // 댓글 작성자 이름 (member JOIN)
     private String content;           // 댓글 본문 내용
-    private LocalDateTime createdAt;  // 작성 일시
+    private Timestamp createdAt;  // 작성 일시
 
     public BoardComment() {}
 
@@ -37,6 +38,6 @@ public class BoardComment implements Serializable {
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 }
