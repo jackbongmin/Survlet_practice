@@ -114,7 +114,7 @@
                 <div class="menu-title">자유 게시판</div>
                 <div class="menu-desc">동료들과 다양한 주제로 소통하고 게시글을 작성할 수 있습니다.</div>
             </div>
-            <span class="menu-badge">준비 중</span>
+            <span class="menu-badge">이용 가능</span>
         </a>
 
         <!-- [기능 카드 3: 마이페이지 (향후 확장 예정 예시)] -->
