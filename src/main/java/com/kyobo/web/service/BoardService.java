@@ -51,6 +51,32 @@ public class BoardService {
         }
         return posts;
     }
+
+
+    /**
+     * 특정 게시글 1건 상세 조회 (댓글 + 좋아요 여부 포함)
+     */
+    public BoardPost getPostDetail(Long postId, String currentUserId) throws SQLException {
+        BoardPost post = boardDao.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다. (번호: " + postId + ")"));
+
+        // 단일 글 좋아요 여부 확인
+        post.setLikedByMe(likeDao.exists(postId, currentUserId));
+
+        // 단일 글 댓글 목록 조회
+        Map<Long, List<BoardComment>> commentMap = commentDao.findByPostIds(Collections.singletonList(postId));
+        post.setComments(commentMap.getOrDefault(postId, Collections.emptyList()));
+
+        return post;
+    }
+
+    /**
+     * 게시글 조회수 1 증가
+     */
+    public void increaseViewCount(Long postId) throws SQLException {
+        boardDao.increaseViewCount(postId);
+    }
+
     // 신규 글 등록
     public Long createPost(String userId, String title, String content, String imagePath) throws SQLException {
         if (title == null || title.trim().isEmpty()) {

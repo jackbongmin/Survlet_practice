@@ -72,7 +72,7 @@
             <c:forEach items="${posts}" var="post">
                 <article class="feed-card" id="post-${post.postId}">
 
-                    <!-- 피드 카드 상단 (작성자 + 작성시간 + 본인 글 관리메뉴) -->
+                    <!-- 피드 카드 상단 (작성자 + 작성시간 + 조회수 배지 + 본인 글 관리메뉴) -->
                     <div class="feed-card-header">
                         <div class="author-info">
                             <div class="avatar-circle">${post.authorName.substring(0, 1)}</div>
@@ -84,21 +84,31 @@
                             </div>
                         </div>
 
-                        <!-- 작성자 본인에게만 수정/삭제 버튼 노출 -->
-                        <c:if test="${post.userId eq sessionScope.loginUser.userId}">
-                            <div class="post-owner-actions">
-                                <a href="${pageContext.request.contextPath}/board?action=edit&postId=${post.postId}" class="btn-text">수정</a>
-                                <form action="${pageContext.request.contextPath}/board?action=delete" method="post" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
-                                    <input type="hidden" name="postId" value="${post.postId}">
-                                    <button type="submit" class="btn-text btn-delete">삭제</button>
-                                </form>
-                            </div>
-                        </c:if>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <!-- 카드 상단 조회수 배지 -->
+                            <span class="view-badge">👁️ ${post.viewCount}</span>
+
+                            <!-- 작성자 본인에게만 수정/삭제 버튼 노출 -->
+                            <c:if test="${post.userId eq sessionScope.loginUser.userId}">
+                                <div class="post-owner-actions">
+                                    <a href="${pageContext.request.contextPath}/board?action=edit&postId=${post.postId}" class="btn-text">수정</a>
+                                    <form action="${pageContext.request.contextPath}/board?action=delete" method="post" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                        <input type="hidden" name="postId" value="${post.postId}">
+                                        <button type="submit" class="btn-text btn-delete">삭제</button>
+                                    </form>
+                                </div>
+                            </c:if>
+                        </div>
                     </div>
 
                     <!-- 피드 카드 본문 -->
                     <div class="feed-body">
-                        <h2 class="post-title"><c:out value="${post.title}" /></h2>
+                        <!-- 제목 클릭 시 단독 상세 페이지로 이동 가능하도록 링크 제공 -->
+                        <h2 class="post-title">
+                            <a href="${pageContext.request.contextPath}/board?action=detail&postId=${post.postId}" style="color:inherit; text-decoration:none;">
+                                <c:out value="${post.title}" />
+                            </a>
+                        </h2>
                         <div class="post-content"><c:out value="${post.content}" /></div>
 
                         <!-- 첨부 이미지가 있을 때만 렌더링 -->
@@ -109,7 +119,7 @@
                         </c:if>
                     </div>
 
-                    <!-- 인터랙션 바: 좋아요 토글 + 댓글 수 -->
+                    <!-- 인터랙션 바: 좋아요 토글 + 댓글 수 + 실시간 조회수 -->
                     <div class="feed-action-bar">
                         <form action="${pageContext.request.contextPath}/board?action=like" method="post" style="margin:0;">
                             <input type="hidden" name="postId" value="${post.postId}">
@@ -122,6 +132,11 @@
                         </form>
                         <div class="comment-count-badge">
                             💬 댓글 ${post.commentCount}개
+                        </div>
+
+                        <!-- 우측 조회수 텍스트 -->
+                        <div class="feed-view-count">
+                            👁️ 조회수 ${post.viewCount}회
                         </div>
                     </div>
 

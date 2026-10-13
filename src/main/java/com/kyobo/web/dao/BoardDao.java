@@ -26,4 +26,7 @@ public interface BoardDao {
 
     // 7. 댓글 개수 증감 (+1 또는 -1)
     void updateCommentCount(Long postId, int delta) throws SQLException;
+
+    // 8. 게시글 조회수 1 증가
+    void increaseViewCount(Long postId) throws SQLException;
 }

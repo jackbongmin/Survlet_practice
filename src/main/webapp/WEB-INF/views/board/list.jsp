@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<div class="feed-container" style="max-width:920px;">
+<div class="feed-container" style="max-width:960px;">
 
     <!-- 상단 내비게이션 바 -->
     <div class="user-bar">
@@ -45,16 +45,18 @@
                     <th style="padding:12px 16px; width:60px; text-align:center;">번호</th>
                     <th style="padding:12px 16px;">제목</th>
                     <th style="padding:12px 16px; width:100px;">작성자</th>
-                    <th style="padding:12px 16px; width:110px;">작성일</th>
-                    <th style="padding:12px 16px; width:70px; text-align:center;">좋아요</th>
-                    <th style="padding:12px 16px; width:70px; text-align:center;">댓글</th>
+                    <th style="padding:12px 16px; width:105px;">작성일</th>
+                    <th style="padding:12px 16px; width:65px; text-align:center;">좋아요</th>
+                    <th style="padding:12px 16px; width:65px; text-align:center;">댓글</th>
+                    <!-- [신규 추가] 조회수 헤더 -->
+                    <th style="padding:12px 16px; width:70px; text-align:center;">조회</th>
                 </tr>
             </thead>
             <tbody>
                 <c:choose>
                     <c:when test="${empty posts}">
                         <tr>
-                            <td colspan="6" style="padding:40px; text-align:center; color:#a0aec0;">등록된 게시글이 없습니다.</td>
+                            <td colspan="7" style="padding:40px; text-align:center; color:#a0aec0;">등록된 게시글이 없습니다.</td>
                         </tr>
                     </c:when>
                     <c:otherwise>
@@ -62,7 +64,8 @@
                             <tr style="border-bottom:1px solid #edf2f7;">
                                 <td style="padding:12px 16px; text-align:center; color:#a0aec0;">${p.postId}</td>
                                 <td style="padding:12px 16px;">
-                                    <a href="${pageContext.request.contextPath}/board?view=feed#post-${p.postId}" style="text-decoration:none; color:#2d3748; font-weight:600;">
+                                    <!-- [수정] 제목 클릭 시 상세 페이지(detail)로 이동 -->
+                                    <a href="${pageContext.request.contextPath}/board?action=detail&postId=${p.postId}" style="text-decoration:none; color:#2d3748; font-weight:600;">
                                         <c:out value="${p.title}" />
                                         <c:if test="${not empty p.imagePath}"><span style="font-size:12px;"> 📷</span></c:if>
                                     </a>
@@ -73,6 +76,10 @@
                                 </td>
                                 <td style="padding:12px 16px; text-align:center; color:#e53e3e;">❤️ ${p.likeCount}</td>
                                 <td style="padding:12px 16px; text-align:center; color:#718096;">💬 ${p.commentCount}</td>
+                                <!-- 조회수 데이터 출력 -->
+                                <td style="padding:12px 16px; text-align:center; color:#4a5568; font-weight:500;">
+                                    👁️ ${p.viewCount}
+                                </td>
                             </tr>
                         </c:forEach>
                     </c:otherwise>

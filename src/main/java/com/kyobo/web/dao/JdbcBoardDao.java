@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public class JdbcBoardDao implements BoardDao {
 
+    // ResultSet에서 BoardPost 객체로 매핑하는 헬퍼 메서드
     private BoardPost map(ResultSet rs) throws SQLException {
         BoardPost p = new BoardPost();
         p.setPostId(rs.getLong("post_id"));
@@ -18,22 +19,27 @@ public class JdbcBoardDao implements BoardDao {
         p.setTitle(rs.getString("title"));
         p.setContent(rs.getString("content"));
         p.setImagePath(rs.getString("image_path"));
+
+        // 조회수 컬럼 매핑
+        p.setViewCount(rs.getInt("view_count"));
+
         p.setLikeCount(rs.getInt("like_count"));
         p.setCommentCount(rs.getInt("comment_count"));
 
         Timestamp cTs = rs.getTimestamp("created_at");
-        if (cTs != null) p.setCreatedAt(rs.getTimestamp("created_at"));
+        if (cTs != null) p.setCreatedAt(cTs);
 
         Timestamp uTs = rs.getTimestamp("updated_at");
-        if (uTs != null) p.setUpdatedAt(rs.getTimestamp("created_at"));
+        if (uTs != null) p.setUpdatedAt(uTs);
 
         return p;
     }
 
     @Override
     public List<BoardPost> findAll(int limit, int offset) throws SQLException {
+        // [수정] SELECT 절에 p.view_count 추가
         String sql = "SELECT p.post_id, p.user_id, m.name AS author_name, p.title, p.content, "
-                + "       p.image_path, p.like_count, p.comment_count, p.created_at, p.updated_at "
+                + "       p.image_path, p.view_count, p.like_count, p.comment_count, p.created_at, p.updated_at "
                 + "FROM board_post p "
                 + "JOIN member m ON p.user_id = m.user_id "
                 + "ORDER BY p.created_at DESC "
@@ -55,8 +61,9 @@ public class JdbcBoardDao implements BoardDao {
 
     @Override
     public Optional<BoardPost> findById(Long postId) throws SQLException {
+        // [수정] SELECT 절에 p.view_count 추가
         String sql = "SELECT p.post_id, p.user_id, m.name AS author_name, p.title, p.content, "
-                + "       p.image_path, p.like_count, p.comment_count, p.created_at, p.updated_at "
+                + "       p.image_path, p.view_count, p.like_count, p.comment_count, p.created_at, p.updated_at "
                 + "FROM board_post p "
                 + "JOIN member m ON p.user_id = m.user_id "
                 + "WHERE p.post_id = ?";
@@ -72,7 +79,7 @@ public class JdbcBoardDao implements BoardDao {
 
     @Override
     public Long save(BoardPost post) throws SQLException {
-        String sql = "INSERT INTO board_post (user_id, title, content, image_path) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO board_post (user_id, title, content, image_path, view_count) VALUES (?, ?, ?, ?, 0)";
         try (Connection conn = ConnectionProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, post.getUserId());
@@ -131,6 +138,17 @@ public class JdbcBoardDao implements BoardDao {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, delta);
             ps.setLong(2, postId);
+            ps.executeUpdate();
+        }
+    }
+
+    // 8. 조회수 1 증가 (원자적 연산으로 동시성 안전 보장)
+    @Override
+    public void increaseViewCount(Long postId) throws SQLException {
+        String sql = "UPDATE board_post SET view_count = view_count + 1 WHERE post_id = ?";
+        try (Connection conn = ConnectionProvider.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, postId);
             ps.executeUpdate();
         }
     }
