@@ -13,6 +13,7 @@
    - 3.2 Service와 DAO 계층을 따로 나눈 이유
    - 3.3 인터페이스(Interface)와 JDBC 구현체를 분리한 이유
    - 3.4 왜 JSP를 `WEB-INF/views/` 폴더에 숨겼을까? (보안 캡슐화)
+   - [★핵심] 3.5 Service는 MVC 패턴에서 C(Controller)에 해당하나요?
 4. [전체 요청-응답 라이프사이클 흐름도](#4-전체-요청-응답-라이프사이클-흐름도)
 5. [기능별 동작 원리 & "어디서 뭘 썼는가?"](#5-기능별-동작-원리--어디서-뭘-썼는가)
    - 5.1 로그인/로그아웃과 HTTP 세션 관리
@@ -27,6 +28,7 @@
    - 6.3 브라우저 렌더링과 페이지 스크롤 초기화/유지 원리
    - 6.4 `PreparedStatement`와 SQL 인젝션 방어
    - 6.5 `try-with-resources`와 DB 커넥션 누수 방지
+   - [★핵심] 6.6 DAO의 `findAll()` / `findBy~`는 일반 `get` 함수와 무엇이 다를까?
 7. [스프링(Spring Boot)으로 넘어갈 때의 대응 관계](#7-스프링spring-boot으로-넘어갈-때의-대응-관계)
 8. [향후 확장해볼 만한 도전 과제](#8-향후-확장해볼-만한-도전-과제)
 
@@ -175,6 +177,32 @@
 * 브라우저 주소창에 `http://localhost:8080/Survlet_practice/login.jsp`라고 직접 쳐서 화면을 열 수 있다면 치명적인 보안 문제가 생깁니다. 로그인 검사 서블릿을 거치지 않고 내부 화면으로 직행할 수 있기 때문입니다.
 * 톰캣(WAS)의 스펙상 **`WEB-INF/` 폴더 밑에 있는 모든 파일은 외부 브라우저의 직접 URL 호출이 물리적으로 100% 차단**됩니다.
 * 오직 서버 내부의 컨트롤러 서블릿이 `request.getRequestDispatcher("/WEB-INF/views/...").forward(req, resp)`로만 열어줄 수 있으므로, **모든 요청이 무조건 컨트롤러의 세션/권한 검사를 거치도록 강제(보안 캡슐화)**할 수 있습니다.
+
+---
+
+### 3.5 [핵심 Q&A] Service는 MVC 패턴에서 C(Controller)에 해당하나요?
+
+> **결론부터 말하면: 아닙니다! Service는 C(Controller)가 아니라 M(Model)의 핵심 심장부(Business Model)입니다.**
+
+초보 시절에는 *"Model은 단순히 데이터를 담는 DTO/VO(`BoardPost`, `Member`) 클래스만 뜻하는 것 아닌가?"*라고 오해하기 쉽습니다. 하지만 소프트웨어 공학의 MVC 패턴 정의에서 **Model(M)은 애플리케이션의 데이터와 비즈니스 로직(규칙) 전체**를 의미합니다.
+
+#### 1) Model(M)의 진짜 구조 (3단 합체)
+실무 웹 아키텍처에서는 이 거대한 Model을 유지보수하기 좋게 세 계층으로 쪼갠 것입니다:
+1. **데이터 바구니 (DTO/VO)**: `BoardPost.java`, `Member.java` (순수 데이터 구조)
+2. **비즈니스 로직 (Service) [★ Service의 위치!]**: `BoardService.java`, `TodoService.java` ("본인 글인가?", "좋아요를 올릴 것인가?" 등 비즈니스 규칙 판정)
+3. **데이터 영속화 (DAO)**: `JdbcBoardDao.java`, `MemberDao.java` (DB SQL 실행)
+
+👉 즉, **[DTO + Service + DAO]가 전부 합쳐져서 거대한 `Model(M)` 영역**을 이룹니다.
+
+#### 2) Controller(C)의 진짜 역할
+[`BoardServlet.java`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/controller/BoardServlet.java) 같은 Controller는 **"웹(HTTP)과 우리 프로그램을 이어주는 교통경찰"** 역할만 해야 합니다.
+- **Controller가 할 일**: HTTP 요청 접수, 파라미터 파싱, 세션 확인, **Service에게 일 시키기(위임)**, JSP 포워드 또는 리다이렉트 분기.
+- **Controller가 하지 말아야 할 일**: 비즈니스 규칙 판정, SQL 실행 (이를 실무에서 **'Thin Controller, Fat Model/Service'** 원칙이라고 부릅니다).
+
+#### 3) Service를 Controller에서 떼어내어 순수 자바(Model)로 둔 결정적 이유
+[`BoardService.java`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/service/BoardService.java)를 열어보면, **`HttpServletRequest`, `HttpServletResponse`, `HttpSession` 같은 웹 기술 코드가 단 1줄도 없습니다.**
+- **플랫폼 독립성**: 나중에 웹(JSP) 대신 모바일 앱(iOS/Android)용 REST API 서버를 만들거나, 백그라운드 배치(Batch) 프로그램을 만들더라도 **Service와 DAO는 단 1줄도 안 고치고 100% 재사용**할 수 있습니다.
+- **테스트 용이성**: 톰캣 서버나 웹 브라우저를 띄우지 않고도 순수 자바 단위 테스트(JUnit)로 비즈니스 규칙을 0.1초 만에 검증할 수 있습니다.
 
 ---
 
@@ -348,6 +376,49 @@ try (Connection conn = ConnectionProvider.getConnection();
 ```
 * JDBC에서 `Connection`이나 `PreparedStatement`를 닫지 않으면 DB 커넥션 풀이 고갈되어 서버 전체가 멈추는 **커넥션 누수(Connection Leak)**가 발생합니다.
 * Java 7부터 도입된 `AutoCloseable` 인터페이스 기반의 `try-with-resources` 문법을 사용하여 `finally { close(); }`의 지저분한 보일러플레이트 없이도 안전하게 자원을 자동 반납했습니다.
+
+---
+
+### 6.6 [네이밍 & DB 관례] DAO의 `findAll()` / `findBy~`는 일반 `get` 함수와 무엇이 다를까?
+
+> **결론부터 말하면: 단순히 자바 객체의 `post.getTitle()`처럼 메모리에 있는 값을 꺼내는 것과는 차원이 다른 "네트워크 DB 발굴 & 객체 조립 작업"입니다.**
+
+* **자바 객체의 `post.getTitle()` (일반 get 함수)**: **내 방 책상 서랍(컴퓨터 RAM 메모리)**을 열어서 이미 올라와 있는 변수 값을 1초의 1억 분의 1초 만에 읽는 것 (비용 거의 0).
+* **DAO의 `boardDao.findById(1L)` (find 함수)**: **멀리 떨어진 중앙 도서관(외부 MySQL DB)**까지 직접 차를 타고 가서, 서가를 뒤져 책을 찾아온 뒤 내 방으로 가져오는 것 (네트워크 통신과 디스크 I/O 발생).
+
+#### 1) `find` 메서드가 내부에서 실제로 하는 4단계 작업
+[`JdbcBoardDao.java`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/dao/JdbcBoardDao.java)의 코드를 보면 `find`는 단순 조회가 아닙니다:
+```java
+public Optional<BoardPost> findById(Long postId) throws SQLException {
+    // 1단계: 외부 MySQL DB로 가는 네트워크 파이프를 연다 (getConnection).
+    try (Connection conn = ConnectionProvider.getConnection();
+         // 2단계: 데이터베이스 전용 언어인 SQL SELECT 명령문을 장전한다.
+         PreparedStatement ps = conn.prepareStatement("SELECT ... FROM board_post WHERE post_id = ?")) {
+        ps.setLong(1, postId);
+        
+        // 3단계: MySQL 서버에 쿼리를 쏴서 하드디스크의 테이블 행(Row) 데이터를 받아온다.
+        try (ResultSet rs = ps.executeQuery()) {
+            // 4단계: DB의 표(Table) 데이터를 자바 객체(BoardPost)로 한 땀 한 땀 조립(매핑)해서 메모리에 얹는다!
+            return rs.next() ? Optional.of(map(rs)) : Optional.empty();
+        }
+    }
+}
+```
+
+#### 2) 왜 `get` 대신 `find`라는 이름을 쓸까? (네이밍 관례)
+전 세계 백엔드 개발자들과 Spring Data JPA, Hibernate 생태계에는 명확한 네이밍 규칙이 있습니다:
+- **`get...()`**: *"데이터가 무조건 존재하니까 바로 가져와!"* (없으면 예외나 null이 터질 위험)
+- **`find...()`**: *"저장소(DB)를 뒤져서 찾아봐(Search). **없을 수도 있어!**"*
+
+`find`는 **"DB를 뒤져보지만 해당 조건의 데이터가 없을 수도 있다"는 불확실성**을 내포합니다. 그래서 우리 프로젝트의 [`findById`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/dao/BoardDao.java)도 `BoardPost`를 날것으로 주지 않고, 없을 때를 대비해 [`Optional<BoardPost>`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/dao/BoardDao.java#L13)를 반환하는 것입니다.
+
+#### 3) 우리 프로젝트의 `find` 메서드 4총사 SQL 매핑 정리
+| 메서드 이름 | 뒤에서 실행되는 실제 SQL | 역할 및 의미 |
+| :--- | :--- | :--- |
+| [`findAll(limit, offset)`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/dao/BoardDao.java#L10) | `SELECT * FROM board_post ORDER BY created_at DESC LIMIT 20` | **전체 목록 조회**: 조건 없이 최신순으로 20개 글을 긁어모아 `List`로 반환 |
+| [`findById(postId)`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/dao/BoardDao.java#L13) | `SELECT * FROM board_post WHERE post_id = ?` | **단건 상세 조회**: 고유 번호(PK)가 일치하는 딱 1개의 글만 정밀 타겟팅 |
+| [`findByUserId(userId)`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/dao/MemberDao.java) | `SELECT * FROM member WHERE user_id = ?` | **조건 검색**: 특정 회원의 아이디로 회원 정보를 조회 (로그인 인증용) |
+| [`findByPostIds(postIds)`](file:///C:/Users/user/Documents/GitHub/Survlet_practice/src/main/java/com/kyobo/web/dao/CommentDao.java) | `SELECT * FROM board_comment WHERE post_id IN (1, 2, 3...)` | **일괄 묶음 검색**: 여러 글의 댓글들을 한 방 쿼리로 몽땅 찾아오기 (N+1 방지) |
 
 ---
 
